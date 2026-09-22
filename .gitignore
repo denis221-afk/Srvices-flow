@@ -1,0 +1,66 @@
+# =========================
+# WordPress Core
+# =========================
+/wp-admin/
+/wp-includes/
+/wp-*.php
+/index.php
+/license.txt
+/readme.html
+/xmlrpc.php
+
+# =========================
+# WordPress content
+# =========================
+/wp-content/plugins/*
+/wp-content/themes/*
+
+# Наш власний код НЕ ігноруємо
+!/wp-content/plugins/serviceflow-core/
+!/wp-content/themes/serviceflow-child/
+
+# =========================
+# Uploads / cache / backups
+# =========================
+/wp-content/uploads/
+/wp-content/cache/
+/wp-content/upgrade/
+/wp-content/backups/
+/wp-content/ai1wm-backups/
+# WordPress generated/system content
+/wp-content/languages/
+/wp-content/jetpack-waf/
+/wp-content/index.php
+
+# =========================
+# Config / secrets
+# =========================
+wp-config.php
+.env
+.env.*
+!.env.example
+
+# =========================
+# OS / IDE
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# =========================
+# Logs
+# =========================
+*.log
+debug.log
+
+# =========================
+# Dependencies
+# =========================
+node_modules/
+vendor/
+
+
+# LocalWP
+.htaccess
+local-xdebuginfo.php
