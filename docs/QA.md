@@ -22,4 +22,4 @@
 - Chrome/Safari/Firefox/Edge; 360/390/768/1024/1280/1440; screen reader/keyboard; contrast; Lighthouse/PSI. Не заявляти невиконані перевірки.
 
 ## Стан
-Модельні тести та PHP/JS syntax passed. WordPress E2E, cross-browser, GA4 DebugView, GSC, provider sandbox і delivery потребують доступу. Фактична перевірка published demo буде зафіксована після публікації.
+Модельні тести та PHP/JS syntax passed. WordPress E2E, cross-browser, GA4 DebugView, GSC, provider sandbox і delivery потребують доступу. Опубліковане демо перевірено 2026-10-11 у Chrome: SUV → ходова → стук+вібрація → 1–3 дні дає 1050–4750 грн; reload зберігає крок; демозаявка відображається в кабінеті. Standard + SUV + кондиціонер = 6000 грн, кількість 2 = 12000 грн. Failure checkout залишає кошик, success створює тестове замовлення. Запис на 2026-10-12 09:00 збережено; повторний слот відхилено. Кейс і демо відкриваються на Railway. Виправлено MIME для .mjs та версіоновано URL модулів після кешованої помилкової відповіді. Mobile/cross-browser та WordPress runtime не перевірені.
