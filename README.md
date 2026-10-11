@@ -11,7 +11,7 @@
 - `demo/`: інтерактивна портфоліо-версія без зовнішньої передачі даних або реальних оплат. Квіз, фільтри, картки послуг, пакети з опціями, кошик, симуляція checkout (success/failure), запис, демокабінет, блог, сценарії, політики.
 - `wp-content/themes/serviceflow-child`: дочірня тема Hello Elementor.
 - `wp-content/plugins/serviceflow-core`: WordPress-плагін. REST-заявки, серверна калькуляція квізу, атомарна резервація слотів, ідемпотентний lead_id, адмінський список/фільтри/CSV/повтор доставки, outbox і WP-Cron, інтеграція з WooCommerce та тестовий gateway.
-- `elementor/`: 12 імпортованих сторінкових шаблонів (shortcode application), окрема native Elementor hero-секція (heading/text/button), design tokens. Інтерактивна частина працює як shortcode, а не як сотні незалежних Elementor widgets.
+- `elementor/`: 12 сторінкових шаблонів для імпорту (shortcode application), окрема native Elementor hero-секція (heading/text/button), design tokens. Інтерактивна частина працює як shortcode, а не як сотні незалежних Elementor widgets.
 - `integrations/`: схема контракту для n8n, webhook та аналітики.
 - `docs/`: актуальна матриця всіх 163 задач backlog, встановлення, QA й обмеження.
 
