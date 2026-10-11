@@ -1,11 +1,49 @@
 <?php
 /**
  * Plugin Name: ServiceFlow Core
- * Description: Core functionality for the ServiceFlow project.
- * Version: 0.1.0
- * Author: ServiceFlow
+ * Description: ServiceFlow quiz, lead storage, booking, integration outbox and demo WooCommerce gateway.
+ * Version: 1.0.0
+ * Author: DM Studio
+ * Requires PHP: 8.1
+ * Text Domain: serviceflow
  */
-
-if ( ! defined( 'ABSPATH' ) ) {
-    exit;
-}
+if (!defined('ABSPATH')) exit;
+define('SF_CORE_DIR',plugin_dir_path(__FILE__));
+define('SF_CORE_URL',plugin_dir_url(__FILE__));
+function sf_catalog(){return json_decode(file_get_contents(SF_CORE_DIR.'catalog.json'),true);}
+function sf_tables(){global $wpdb;return ['leads'=>$wpdb->prefix.'sf_leads','slots'=>$wpdb->prefix.'sf_slots'];}
+register_activation_hook(__FILE__,function(){global $wpdb;require_once ABSPATH.'wp-admin/includes/upgrade.php';$t=sf_tables();$c=$wpdb->get_charset_collate();dbDelta("CREATE TABLE {$t['leads']} (
+id bigint unsigned NOT NULL AUTO_INCREMENT,
+lead_id varchar(64) NOT NULL,
+user_id bigint unsigned NOT NULL DEFAULT 0,
+source varchar(32) NOT NULL,
+service varchar(64) NOT NULL,
+status varchar(24) NOT NULL DEFAULT 'new',
+payload longtext NOT NULL,
+delivery varchar(24) NOT NULL DEFAULT 'pending',
+attempts int NOT NULL DEFAULT 0,
+created_at datetime NOT NULL,
+PRIMARY KEY (id),
+UNIQUE KEY lead_id (lead_id),
+KEY user_id (user_id)
+) $c;");dbDelta("CREATE TABLE {$t['slots']} (
+slot varchar(32) NOT NULL,
+lead_id varchar(64) NOT NULL,
+PRIMARY KEY (slot),
+UNIQUE KEY lead_id (lead_id)
+) $c;");if(!wp_next_scheduled('sf_retry_outbox'))wp_schedule_event(time()+300,'hourly','sf_retry_outbox');});
+register_deactivation_hook(__FILE__,function(){wp_clear_scheduled_hook('sf_retry_outbox');});
+function sf_error($msg,$status=400){return new WP_Error('sf_validation',$msg,['status'=>$status]);}
+function sf_estimate($a){$c=sf_catalog();$map=['engine'=>'engine','brakes'=>'brakes','suspension'=>'suspension','electrics'=>'electrics','maintenance'=>'maintenance','other'=>'diagnostics'];$id=$map[$a['problem']??'']??'diagnostics';$s=current(array_filter($c['services'],fn($x)=>$x['id']===$id));$factor=1;foreach($c['carTypes'] as $x)if($x['id']===($a['carType']??''))$factor=$x['factor'];$sym=is_array($a['symptoms']??null)?$a['symptoms']:[];$complex=1+min(max(count($sym)-1,0),3)*.1;$urgent=($a['urgency']??'')==='today'?1.15:1;return ['serviceId'=>$id,'serviceName'=>$s['name'],'from'=>(int)(round($s['from']*$factor*$complex*$urgent/50)*50),'to'=>(int)(round($s['to']*$factor*$complex*$urgent/50)*50),'rulesVersion'=>'1.0'];}
+function sf_public_permission($r){$origin=get_http_origin();if($origin&&parse_url($origin,PHP_URL_HOST)!==parse_url(home_url(),PHP_URL_HOST))return sf_error('Origin rejected.',403);if(!wp_verify_nonce($r->get_header('X-WP-Nonce'),'wp_rest'))return sf_error('Оновіть сторінку та повторіть спробу.',403);return true;}
+add_action('rest_api_init',function(){register_rest_route('serviceflow/v1','/leads',['methods'=>'POST','permission_callback'=>'sf_public_permission','callback'=>'sf_create_lead']);register_rest_route('serviceflow/v1','/my-leads',['methods'=>'GET','permission_callback'=>fn()=>is_user_logged_in(),'callback'=>function(){global $wpdb;$t=sf_tables();return $wpdb->get_results($wpdb->prepare("SELECT lead_id,source,service,status,created_at FROM {$t['leads']} WHERE user_id=%d ORDER BY id DESC LIMIT 100",get_current_user_id()),ARRAY_A);}]);register_rest_route('serviceflow/v1','/profile',['methods'=>['GET','POST'],'permission_callback'=>fn()=>is_user_logged_in(),'callback'=>function($r){$id=get_current_user_id();if($r->get_method()==='POST'){$cars=$r->get_param('cars');if(!is_array($cars)||count($cars)>10)return sf_error('Invalid cars.');$safe=[];foreach($cars as $car){$y=(int)($car['year']??0);if($y<1980||$y>(int)date('Y')+1)return sf_error('Invalid year.');$safe[]=['model'=>sanitize_text_field(substr($car['model']??'',0,100)),'year'=>$y];}update_user_meta($id,'sf_cars',$safe);}return ['cars'=>get_user_meta($id,'sf_cars',true)?:[]];}]);});
+function sf_create_lead($r){global $wpdb;$t=sf_tables();$d=$r->get_json_params();if(!is_array($d))return sf_error('Invalid request.');$name=sanitize_text_field(substr($d['name']??'',0,80));$phone=preg_replace('/[^0-9+]/','',$d['phone']??'');$email=sanitize_email($d['email']??'');if(!$name||!preg_match('/^\+?[0-9]{9,15}$/',$phone)||empty($d['consent'])||!empty($d['website']))return sf_error('Перевірте ім’я, телефон і згоду.');if(!empty($d['email'])&&!is_email($d['email']))return sf_error('Invalid email.');$id=$d['lead_id']??'';if(!is_string($id)||!preg_match('/^[a-f0-9-]{36}$/i',$id))return sf_error('Invalid lead id.');$source=$d['source']??'';if(!in_array($source,['quiz','booking','contact','service_form','order'],true))return sf_error('Invalid source.');$catalog=sf_catalog();$ids=array_column($catalog['services'],'id');$service=$d['service']??'diagnostics';if(!in_array($service,$ids,true))return sf_error('Invalid service.');$existing=$wpdb->get_var($wpdb->prepare("SELECT lead_id FROM {$t['leads']} WHERE lead_id=%s",$id));if($existing)return ['ok'=>true,'lead_id'=>$existing,'duplicate'=>true];$ip=hash_hmac('sha256',$_SERVER['REMOTE_ADDR']??'unknown',wp_salt('auth'));$rate=(int)get_transient('sf_rate_'.$ip);if($rate>=6)return sf_error('Забагато спроб. Спробуйте пізніше.',429);set_transient('sf_rate_'.$ip,$rate+1,10*MINUTE_IN_SECONDS);
+$payload=['lead_id'=>$id,'source'=>$source,'service'=>$service,'name'=>$name,'phone'=>$phone,'email'=>$email,'comment'=>sanitize_textarea_field(substr($d['comment']??'',0,1000)),'consent'=>true,'consent_at'=>current_time('mysql',true),'utm'=>[]];foreach(['utm_source','utm_medium','utm_campaign','utm_content','utm_term'] as $key)if(isset($d['utm'][$key]))$payload['utm'][$key]=sanitize_text_field(substr($d['utm'][$key],0,200));
+if($source==='quiz'){$a=$d['answers']??[];if(!is_array($a)||!in_array($a['carType']??'',array_column($catalog['carTypes'],'id'),true)||!in_array($a['problem']??'', ['engine','brakes','suspension','electrics','maintenance','other'],true))return sf_error('Invalid quiz.');$year=(int)($a['year']??0);if($year<1980||$year>(int)date('Y')+1)return sf_error('Invalid year.');$sym=$a['symptoms']??[];if(!is_array($sym)||count($sym)>5)return sf_error('Invalid symptoms.');$payload['answers']=['carType'=>$a['carType'],'problem'=>$a['problem'],'symptoms'=>array_map('sanitize_text_field',$sym),'urgency'=>sanitize_key($a['urgency']??'planned'),'model'=>sanitize_text_field(substr($a['model']??'',0,100)),'year'=>$year];$payload['result']=sf_estimate($payload['answers']);$payload['service']=$payload['result']['serviceId'];}
+$slot=null;if($source==='booking'){$date=$d['date']??'';$time=$d['time']??'';$tz=wp_timezone();$day=DateTimeImmutable::createFromFormat('!Y-m-d',$date,$tz);$today=new DateTimeImmutable('today',$tz);if(!$day||$day->format('Y-m-d')!==$date||$day<$today||$day>$today->modify('+90 days')||$day->format('w')==='0'||!in_array($time,['09:00','10:00','11:00','12:00','14:00','15:00','16:00','17:00','18:00'],true))return sf_error('Invalid booking time.');$slot=$date.' '.$time;$locked=$wpdb->insert($t['slots'],['slot'=>$slot,'lead_id'=>$id]);if(!$locked)return sf_error('Цей час уже обрано. Спробуйте інший.',409);$payload['date']=$date;$payload['time']=$time;$payload['car']=sanitize_text_field(substr($d['car']??'',0,100));}
+$saved=$wpdb->insert($t['leads'],['lead_id'=>$id,'user_id'=>get_current_user_id(),'source'=>$source,'service'=>$payload['service'],'payload'=>wp_json_encode($payload),'created_at'=>current_time('mysql',true)]);if(!$saved){if($slot)$wpdb->delete($t['slots'],['lead_id'=>$id]);if($wpdb->get_var($wpdb->prepare("SELECT id FROM {$t['leads']} WHERE lead_id=%s",$id)))return ['ok'=>true,'lead_id'=>$id,'duplicate'=>true];return sf_error('Збереження недоступне. Повторіть спробу.',503);}wp_schedule_single_event(time()+5,'sf_deliver_lead',[$id]);return new WP_REST_Response(['ok'=>true,'lead_id'=>$id],201);}
+function sf_deliver($id){global $wpdb;$t=sf_tables();$row=$wpdb->get_row($wpdb->prepare("SELECT * FROM {$t['leads']} WHERE lead_id=%s",$id),ARRAY_A);if(!$row||$row['delivery']==='sent'||(int)$row['attempts']>=4)return;if(!defined('SF_WEBHOOK_URL')||!defined('SF_WEBHOOK_SECRET')){$wpdb->update($t['leads'],['delivery'=>'not_configured'],['lead_id'=>$id]);return;}$url=SF_WEBHOOK_URL;if(parse_url($url,PHP_URL_SCHEME)!=='https'||!wp_http_validate_url($url))return;$lock='sf_send_'.md5($id);if(!add_option($lock,time(),'','no'))return;try{$d=json_decode($row['payload'],true);$res=wp_safe_remote_post($url,['timeout'=>15,'redirection'=>0,'headers'=>['Content-Type'=>'application/json','X-ServiceFlow-Secret'=>SF_WEBHOOK_SECRET,'Idempotency-Key'=>$id],'body'=>wp_json_encode($d)]);$ok=!is_wp_error($res)&&wp_remote_retrieve_response_code($res)>=200&&wp_remote_retrieve_response_code($res)<300;$attempts=(int)$row['attempts']+1;$wpdb->update($t['leads'],['delivery'=>$ok?'sent':'failed','attempts'=>$attempts],['lead_id'=>$id]);if(!$ok&&$attempts<4)wp_schedule_single_event(time()+min(3600,60*2**$attempts),'sf_deliver_lead',[$id]);}finally{delete_option($lock);}}
+add_action('sf_deliver_lead','sf_deliver');add_action('sf_retry_outbox',function(){global $wpdb;$t=sf_tables();$ids=$wpdb->get_col("SELECT lead_id FROM {$t['leads']} WHERE delivery IN ('pending','failed') AND attempts<4 ORDER BY id ASC LIMIT 20");foreach($ids as $id)sf_deliver($id);});
+add_shortcode('serviceflow_app',function($attrs){$a=shortcode_atts(['route'=>''],$attrs);wp_enqueue_style('sf-app',SF_CORE_URL.'assets/style.css',[],'1.0.0');wp_enqueue_script('sf-app',SF_CORE_URL.'assets/app.mjs',[],'1.0.0',true);$config=['mode'=>'wordpress','rest'=>rest_url('serviceflow/v1/'),'nonce'=>wp_create_nonce('wp_rest'),'initialRoute'=>sanitize_text_field($a['route']),'cartUrl'=>function_exists('wc_get_cart_url')?wc_get_cart_url():null,'checkoutUrl'=>function_exists('wc_get_checkout_url')?wc_get_checkout_url():null,'accountUrl'=>function_exists('wc_get_page_permalink')?wc_get_page_permalink('myaccount'):null];wp_add_inline_script('sf-app','window.ServiceFlow='.wp_json_encode($config).';','before');$html=file_get_contents(SF_CORE_DIR.'app.html');preg_match('~<body>(.*?)</body>~s',$html,$m);$body=preg_replace('~<script[^>]*>.*?</script>~s','',$m[1]??'');$body=str_replace('/cases/serviceflow/','https://dm-studio-production.up.railway.app/cases/serviceflow/',$body);return '<div class="serviceflow-app">'.$body.'</div>';});
+add_filter('script_loader_tag',function($tag,$handle){if($handle==='sf-app'){ $tag=preg_replace('/ type="[^"]*"/','',$tag);return str_replace('<script ','<script type="module" ',$tag);}return $tag;},10,2);
+require_once SF_CORE_DIR.'admin.php';require_once SF_CORE_DIR.'woocommerce.php';

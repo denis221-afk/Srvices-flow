@@ -1,0 +1,28 @@
+{
+  "colors": {
+    "primary": "#2563EB",
+    "text": "#111827",
+    "secondary": "#667085",
+    "accent": "#2563EB"
+  },
+  "typography": {
+    "primary": "Manrope",
+    "text": "Inter"
+  },
+  "contentWidth": 1280,
+  "breakpoints": {
+    "tablet": 1024,
+    "mobile": 767
+  },
+  "spacing": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48,
+    64,
+    96
+  ]
+}

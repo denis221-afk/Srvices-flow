@@ -1,7 +1,10 @@
 /*
 Theme Name: ServiceFlow Child
-Description: Child theme for ServiceFlow
-Author: ServiceFlow
+Description: ServiceFlow child theme for Hello Elementor. Requires ServiceFlow Core.
+Author: DM Studio
 Template: hello-elementor
-Version: 0.1.0
+Version: 1.0.0
+Text Domain: serviceflow
 */
+:root{--sf-primary:#2563eb;--sf-ink:#111827;--sf-content:1280px}
+.serviceflow-app .elementor-widget-container{margin:0}

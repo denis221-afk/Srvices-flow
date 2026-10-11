@@ -1,0 +1,70 @@
+{
+  "title": "ServiceFlow — Native Hero",
+  "type": "section",
+  "version": "0.4",
+  "page_settings": [],
+  "content": [
+    {
+      "id": "sfhero01",
+      "elType": "container",
+      "isInner": false,
+      "settings": {
+        "background_background": "classic",
+        "background_color": "#0E1726",
+        "padding": {
+          "unit": "px",
+          "top": "80",
+          "right": "32",
+          "bottom": "80",
+          "left": "32",
+          "isLinked": false
+        }
+      },
+      "elements": [
+        {
+          "id": "sfhead01",
+          "elType": "widget",
+          "widgetType": "heading",
+          "settings": {
+            "title": "Ремонт авто без сюрпризів у ціні.",
+            "header_size": "h1",
+            "title_color": "#FFFFFF",
+            "typography_typography": "custom",
+            "typography_font_size": {
+              "unit": "px",
+              "size": 56
+            },
+            "typography_font_size_mobile": {
+              "unit": "px",
+              "size": 38
+            }
+          },
+          "elements": []
+        },
+        {
+          "id": "sftext01",
+          "elType": "widget",
+          "widgetType": "text-editor",
+          "settings": {
+            "editor": "<p>Оберіть симптоми, отримайте попередню оцінку та заплануйте сервіс.</p>",
+            "text_color": "#A9B5C8"
+          },
+          "elements": []
+        },
+        {
+          "id": "sfbtn001",
+          "elType": "widget",
+          "widgetType": "button",
+          "settings": {
+            "text": "Оцінити вартість",
+            "link": {
+              "url": "/#/quiz"
+            },
+            "background_color": "#2563EB"
+          },
+          "elements": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+{"name":"serviceflow","version":"1.0.0","private":true,"type":"module","scripts":{"test":"node --test tests/*.test.mjs","check":"node --check demo/assets/app.mjs","prepare":"node scripts/prepare.mjs"}}

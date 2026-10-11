@@ -1,0 +1,155 @@
+{
+  "name": "ServiceFlow — lead delivery (configure credentials; inactive)",
+  "nodes": [
+    {
+      "id": "sf-webhook",
+      "name": "Authenticated lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "serviceflow",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "CONFIGURE_HEADER_AUTH",
+          "name": "ServiceFlow webhook header"
+        }
+      }
+    },
+    {
+      "id": "sf-sheet",
+      "name": "Upsert lead_id",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "CONFIGURE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $node[\"Authenticated lead\"].json.body.lead_id }}",
+            "source": "={{ $node[\"Authenticated lead\"].json.body.source }}",
+            "service": "={{ $node[\"Authenticated lead\"].json.body.service }}",
+            "name": "={{ $node[\"Authenticated lead\"].json.body.name }}",
+            "phone": "={{ $node[\"Authenticated lead\"].json.body.phone }}",
+            "email": "={{ $node[\"Authenticated lead\"].json.body.email }}",
+            "comment": "={{ $node[\"Authenticated lead\"].json.body.comment }}",
+            "consent_at": "={{ $node[\"Authenticated lead\"].json.body.consent_at }}"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CONFIGURE_GOOGLE_OAUTH",
+          "name": "ServiceFlow Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "sf-telegram",
+      "name": "Notify manager",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "chatId": "CONFIGURE_CHAT_ID",
+        "text": "={{ \"ServiceFlow / \" + $node[\"Authenticated lead\"].json.body.lead_id + \"\\n\" + $node[\"Authenticated lead\"].json.body.service + \"\\n\" + $node[\"Authenticated lead\"].json.body.name + \" / \" + $node[\"Authenticated lead\"].json.body.phone }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "CONFIGURE_TELEGRAM",
+          "name": "ServiceFlow Telegram"
+        }
+      }
+    },
+    {
+      "id": "sf-response",
+      "name": "Acknowledge delivery",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        780,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, lead_id: $node[\"Authenticated lead\"].json.body.lead_id } }}",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Authenticated lead": {
+      "main": [
+        [
+          {
+            "node": "Upsert lead_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert lead_id": {
+      "main": [
+        [
+          {
+            "node": "Notify manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify manager": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
