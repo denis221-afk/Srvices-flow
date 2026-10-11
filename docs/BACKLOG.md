@@ -165,5 +165,5 @@
 | SF-159 | 8 | Додати схему WordPress → n8n → Telegram/Sheets | Реалізовано | README.md; docs/; інтеграційний контракт; портфоліо-кейс |
 | SF-160 | 8 | Додати GA4/GTM докази | Потрібен доступ / перевірка | docs/DEPLOYMENT.md; відповідний hosting/account/tool |
 | SF-161 | 8 | Додати PageSpeed до/після | Потрібен доступ / перевірка | docs/DEPLOYMENT.md; відповідний hosting/account/tool |
-| SF-162 | 8 | Опублікувати production demo | Публікується | Портфоліо-демо Railway; WP production окремо |
+| SF-162 | 8 | Опублікувати production demo | Реалізовано для портфоліо | https://dm-studio-production.up.railway.app/demos/serviceflow/; WP production окремо |
 | SF-163 | 8 | Підготувати публічну частину GitHub | Реалізовано | README.md; docs/; інтеграційний контракт; портфоліо-кейс |
