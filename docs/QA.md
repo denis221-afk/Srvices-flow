@@ -39,3 +39,5 @@ Chrome, desktop (viewport близько 1363 px); використовувал�
 - Модельні тести 5/5 пройшли; JS syntax пройшов.
 
 Реальні мобільні пристрої, Safari/Firefox/Edge, Lighthouse/PSI, WordPress runtime і зовнішні інтеграції в цьому аудиті не перевірені. Цей звіт не підтверджує production-платежі або встановлення WordPress.
+
+Повторна перевірка після успішного Railway deploy: на #/article/noise Tab → Enter залишає URL незмінним, activeElement.id = app, document.title = «Стук у ходовій: як підготуватися до діагностики — ServiceFlow». FAQ відкриває відповідь, зміст статті не змінює маршрут, невідома послуга показує сторінку «Не знайдено». Виправлення підтверджені у live-демо.
